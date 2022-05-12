@@ -1,5 +1,7 @@
 import requests
 from bs4 import BeautifulSoup as b
+import time
+import json
 
 
 class Products:
@@ -11,6 +13,15 @@ class Products:
     
     def __init__(self):
         self.items = {}
+        
+        try:
+            with open('products.json', 'r') as w:
+                data = json.load(w)
+                Products.UPCtoName = data
+        except:
+            print("File probably does not exist")
+        
+        
         
         
     def __str__(self):
@@ -36,17 +47,26 @@ class Products:
                 res = soup.tbody.tr.find_all('td')
                 item, price = res[1].string,float(res[2].string.replace("$",""))
             
-                Products.UPCtoName[UPC] = item
+                Products.UPCtoName[UPC] = item, price
+                
+                j = json.dumps(Products.UPCtoName)
+                with open('products.json','w') as w:
+                    w.write(j)
+                    
             except:
                 print("ERROR: Product not found, please scan again")
                 return
         else:
-            item, price = Products.UPCtoName[UPC], self.items[Products.UPCtoName[UPC]][0]
+            item, price = Products.UPCtoName[UPC][0], Products.UPCtoName[UPC][1]
             
         if(item not in self.items.keys()):
             self.items[item] = (price, 1)
+            # self.items[item]["cost"] = price
+            # self.items[item]["quantity"] = 1
         else:
             self.items[item] = (price, self.items[item][1]+1)
+            # self.items[item]["cost"] = price
+            # self.items[item]["quantity"] = self.items[item]["quantity"] + 1
         return
     
     def removeItem(self, name):
@@ -55,11 +75,18 @@ class Products:
         Args:
             name (str): Name of product to be removed
         """
-        if(self.items[name][1] == 1):
-            self.items.pop(name)
-        else:
-            self.items[name] = (self.items[name][0], self.items[name][1]-1)
+
+        if(name in Products.UPCtoName.keys()):
+            val = Products.UPCtoName[name][0]
+            if(val in self.items.keys()):
+                if(self.items[val][1] == 1):
+                    self.items.pop(val)
+                else:
+                    self.items[val] = (self.items[val][0], self.items[val][1]-1)
         return
+    
+    def resetCart(self):
+        self.items.clear()
     
 if __name__ == '__main__':
     products = Products()
